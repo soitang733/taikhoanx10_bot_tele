@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>VNStock Local Analysis</title>
+  <style>
+    :root{--bg:#07111f;--panel:#101d2e;--line:#23344a;--text:#eaf1f8;--muted:#8fa3b8;--cyan:#35d0ba;--green:#55d68b;--amber:#f5be58;--red:#ff6b6b}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0,#12314a 0,transparent 35%),var(--bg);color:var(--text);font:14px/1.45 Inter,Segoe UI,sans-serif}
+    main{max-width:1320px;margin:auto;padding:30px 22px 60px}.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:24px}h1{font-size:30px;margin:0;letter-spacing:-.03em}.subtitle{color:var(--muted);margin-top:5px}.pill{padding:7px 11px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
+    .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:18px 0}.card,.panel{background:linear-gradient(145deg,#122238dd,#0d1929dd);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 35px #0004}.card{padding:16px}.label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.value{font-size:25px;font-weight:750;margin-top:4px}.layout{display:grid;grid-template-columns:1.65fr 1fr;gap:16px}.panel{padding:18px;min-width:0}.panel h2{font-size:16px;margin:0 0 15px}
+    .toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}input,select,button{background:#091525;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:9px 11px}input{min-width:170px}button{cursor:pointer;background:#17324a}button:hover{border-color:var(--cyan)}
+    .table-wrap{overflow:auto;max-height:610px}table{width:100%;border-collapse:collapse;white-space:nowrap}th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;position:sticky;top:0;background:#101d2e;padding:10px 8px}td{padding:10px 8px;border-top:1px solid #1b2a3d}tr{cursor:pointer}tbody tr:hover{background:#16283d}.ticker{font-weight:750;color:#dff}.num{text-align:right;font-variant-numeric:tabular-nums}
+    .tag{display:inline-block;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:750}.BUY{background:#123d31;color:#78f0b4}.WATCH{background:#493818;color:#ffd780}.HOLD{background:#18374a;color:#80d7ff}.EXIT{background:#4c2027;color:#ff9ca8}.NOT_ELIGIBLE_FA,.DATA_REVIEW{background:#263241;color:#aebccc}
+    .detail-head{display:flex;justify-content:space-between;align-items:center}.big-ticker{font-size:27px;font-weight:800}.price{font-size:22px;color:var(--cyan)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0}.metric{background:#0a1625;border:1px solid #1e3045;border-radius:10px;padding:10px}.metric b{display:block;font-size:17px;margin-top:2px}.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}.check{padding:9px;border-radius:8px;background:#0a1625;border:1px solid #1e3045}.ok{color:var(--green)}.no{color:var(--red)}#chart{width:100%;height:180px;margin-top:13px;background:#091525;border-radius:10px}.reason{color:var(--muted);font-size:12px;margin-top:13px;overflow-wrap:anywhere}.empty{padding:35px 5px;color:var(--muted);text-align:center}
+    .full{margin-top:16px}.diag-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.wide{grid-column:1/-1}.note{padding:11px 13px;border-left:3px solid var(--amber);background:#241e13;color:#e8d3a5;border-radius:5px;margin-bottom:12px}.note:empty{display:none}.statline{display:flex;justify-content:space-between;gap:15px;padding:8px 0;border-bottom:1px solid #1b2a3d}.statline:last-child{border:0}.statline span{color:var(--muted)}details{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}summary{cursor:pointer;color:var(--cyan)}pre{white-space:pre-wrap;word-break:break-word;max-height:430px;overflow:auto;background:#081321;padding:12px;border-radius:9px;color:#bcd0e2;font-size:11px}.explain{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.explain div{padding:12px;border:1px solid var(--line);border-radius:10px;background:#0a1625}.explain b{display:block;margin-bottom:4px}
+    @media(max-width:950px){.cards{grid-template-columns:repeat(2,1fr)}.layout,.diag-grid{grid-template-columns:1fr}.wide{grid-column:auto}.top{align-items:flex-start;flex-direction:column}}@media(max-width:520px){main{padding:20px 12px}.cards{grid-template-columns:1fr 1fr}.card:last-child{grid-column:1/-1}.grid,.checks,.explain{grid-template-columns:1fr}}
+  </style>
+</head>
+<body><main>
+  <div class="top"><div><h1>VNStock Local Analysis</h1><div class="subtitle">Điểm thống nhất FA + giá/khối lượng · đọc từ SQLite local</div></div><div id="status" class="pill">Đang kết nối…</div></div>
+  <section class="cards">
+    <div class="card"><div class="label">Cổ phiếu</div><div id="total" class="value">—</div></div>
+    <div class="card"><div class="label">FA ≥65 (tham khảo)</div><div id="faPass" class="value">—</div></div>
+    <div class="card"><div class="label">BUY</div><div id="buy" class="value">—</div></div>
+    <div class="card"><div class="label">WATCH</div><div id="watch" class="value">—</div></div>
+    <div class="card"><div class="label">Ngày dữ liệu</div><div id="date" class="value" style="font-size:19px">—</div></div>
+  </section>
+  <div class="layout">
+    <section class="panel"><h2>Bảng xếp hạng & tín hiệu thống nhất</h2><div class="toolbar"><input id="search" placeholder="Nhập mã, ví dụ FPT"><select id="filter"><option value="">Tất cả trạng thái</option><option>BUY</option><option>WATCH</option><option>HOLD</option><option>EXIT</option><option>DATA_REVIEW</option></select><button id="reload">Làm mới</button></div><div class="table-wrap"><table><thead><tr><th>Mã</th><th>Tín hiệu</th><th class="num">Unified</th><th class="num">FA</th><th class="num">Price-volume</th><th class="num">R6M</th><th class="num">Vol ratio</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+    <aside class="panel"><h2>Chi tiết mã</h2><div id="detail" class="empty">Chọn một mã trong bảng để xem công thức và biểu đồ.</div></aside>
+  </div>
+  <section class="panel full">
+    <h2>Phương pháp đầu tư (Unified FA+TA Score - Phiên bản v3)</h2>
+    <div class="note" style="margin-top: 10px; margin-bottom: 15px;">FA và hành vi giá/khối lượng đóng góp vào cùng một điểm xếp hạng. Tham số và kết quả kiểm chứng đang dùng được hiển thị bên dưới.</div>
+    <div id="activeMethod" class="reason"></div>
+    <div class="explain" style="grid-template-columns: repeat(2, 1fr);">
+      <div><b style="color:var(--cyan); font-size: 15px;">1. Bộ lọc Thị trường chung (Market Regime)</b>
+        <ul style="padding-left: 20px; margin-top: 5px; color: var(--muted)">
+          <li>Chỉ kích hoạt vị thế <b>MUA</b> khi VN-Index nằm trên đường trung bình 50 phiên (MA50).</li>
+          <li><b>Mục đích:</b> Hạn chế mở vị thế mới khi thị trường yếu; các mã đang giữ vẫn theo quy tắc thoát riêng.</li>
+        </ul>
+      </div>
+      <div><b style="color:var(--cyan); font-size: 15px;">2. Chấm điểm Cổ phiếu (Unified Score)</b>
+        <ul style="padding-left: 20px; margin-top: 5px; color: var(--muted)">
+          <li><b>Tổng điểm (100%)</b> = Điểm giá/khối lượng (80%) + Điểm Cơ bản FA hiệu dụng (20%).</li>
+          <li><b>Giá/khối lượng:</b> Momentum 30%, RS6M 25%, Trend 25%, Breakout 15%, Volume 5%. Khi hòa điểm, ưu tiên sức mạnh R3M/R6M/R12M/RS6M liên tục.</li>
+          <li><b>FA:</b> Chấm theo 4 trụ cột Chất lượng (40%), Tăng trưởng (25%), Giá trị (20%), An toàn (15%).</li>
+        </ul>
+      </div>
+      <div><b style="color:var(--cyan); font-size: 15px;">3. Điều kiện Mở vị thế (BUY)</b>
+        <ul style="padding-left: 20px; margin-top: 5px; color: var(--muted)">
+          <li>Unified Score ≥ <b>60 điểm</b>, rồi chọn tối đa <b>Top 30</b> mã có điểm cao nhất.</li>
+          <li>Thanh khoản bình quân 20 phiên tối thiểu <b>2 tỷ đồng/phiên</b>.</li>
+          <li>Điểm khối lượng đạt khi Volume ratio ≥ <b>0,8</b>; xu hướng đạt khi Giá &gt; MA50 &gt; MA200.</li>
+          <li>Mã lỗ ròng hoặc vốn chủ sở hữu âm bị đưa thành phần FA về 0; quyết định cuối vẫn nằm trong một Unified Score chung.</li>
+        </ul>
+      </div>
+      <div><b style="color:var(--cyan); font-size: 15px;">4. Kỷ luật Đóng vị thế (EXIT)</b>
+        <ul style="padding-left: 20px; margin-top: 5px; color: var(--muted)">
+          <li>Thoát ngay khi Giá rớt dưới <b>MA200</b> hoặc thấp hơn 15% so với đỉnh đóng cửa 60 phiên; thoát theo điểm khi Unified Score &lt; 35 sau tối thiểu 10 phiên.</li>
+          <li>Sau khi thoát, mã bị cooldown 5 phiên. Số liệu lệnh thắng/thua được đọc từ báo cáo Backtest Unified bên dưới.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  <section class="panel full">
+    <h2>Giải thích trạng thái</h2>
+    <div class="explain"><div><b>Unified Score</b>20% FA đã điều chỉnh theo độ phủ + 80% hành vi giá/khối lượng. FA không còn là cổng chặn tách biệt.</div><div><b>DATA_REVIEW</b>Thiếu lịch sử cốt lõi như Return 12M hoặc MA200 nên chưa đủ điều kiện xếp hạng.</div></div>
+  </section>
+  <section class="diag-grid full">
+    <div class="panel"><h2>Lý do WATCH</h2><div id="watchBreakdown">Đang tải…</div><p class="reason">BUY là cơ hội mới theo dữ liệu phiên mới nhất, không phải lệnh cho danh mục cá nhân. HOLD/EXIT cần trạng thái vị thế riêng.</p></div>
+    <div class="panel"><h2>Chất lượng & độ phủ dữ liệu</h2><div id="quality">Đang tải…</div></div>
+    <div class="panel"><h2>Phân loại FA</h2><div id="faBreakdown">Đang tải…</div></div>
+    <div class="panel wide"><h2>Các mã thiếu lịch sử TA</h2><div class="note">Đây chủ yếu là mã mới có ít phiên giao dịch. Bảng ghi rõ chỉ tiêu nào chưa tính được.</div><div class="table-wrap" style="max-height:340px"><table><thead><tr><th>Mã</th><th class="num">Số phiên</th><th>Thiếu chỉ tiêu</th><th class="num">Độ phủ FA</th><th>Tín hiệu cuối</th></tr></thead><tbody id="reviewRows"></tbody></table></div></div>
+    <div class="panel"><h2>Nguồn giá</h2><div id="sources">Đang tải…</div></div>
+    <div class="panel"><h2>Backtest Unified</h2><div id="backtest">Đang tải…</div></div>
+  </section>
+</main><script>
+const $=s=>document.querySelector(s);let all=[];
+const n=(v,d=1)=>v==null?'—':Number(v).toLocaleString('vi-VN',{maximumFractionDigits:d});
+const pct=v=>v==null?'—':`${(Number(v)*100).toFixed(1)}%`;
+async function json(url){const r=await fetch(url);const body=await r.json();if(!r.ok&&r.status!==503)throw new Error(body.error||r.statusText);return body}
+async function load(){try{const [h,s,r,d]=await Promise.all([json('/health'),json('/v1/summary'),json('/v1/rankings?limit=5000'),json('/v1/diagnostics')]);all=r.data;$('#status').textContent=`SQLite ✓ · ${n(h.price_rows,0)} dòng giá`;$('#total').textContent=n(s.coverage.total,0);$('#faPass').textContent=n(s.coverage.fa_pass,0);const actions=Object.fromEntries(s.actions.map(x=>[x.final_action,x.count]));$('#buy').textContent=n(actions.BUY||0,0);$('#watch').textContent=n(actions.WATCH||0,0);$('#date').textContent=s.coverage.signal_date||h.latest_market_date||'—';render();renderDiagnostics(d);renderBacktestAudit(d.backtest)}catch(e){$('#status').textContent=`Lỗi: ${e.message}`}}
+function render(){const q=$('#search').value.trim().toUpperCase(),f=$('#filter').value;const data=all.filter(x=>(!q||x.ticker.includes(q))&&(!f||x.final_action===f));$('#rows').innerHTML=data.map(x=>`<tr data-t="${x.ticker}"><td class="ticker">${x.ticker}</td><td><span class="tag ${x.final_action}">${x.final_action}</span></td><td class="num">${n(x.unified_score)}</td><td class="num">${n(x.fa_score)}</td><td class="num">${n(x.ta_score,0)}</td><td class="num">${pct(x.r_6m)}</td><td class="num">${n(x.volume_ratio,2)}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">Không có mã phù hợp</td></tr>';document.querySelectorAll('tbody tr[data-t]').forEach(tr=>tr.onclick=()=>show(tr.dataset.t))}
+async function show(t){const [s,p]=await Promise.all([json(`/v1/signal?ticker=${t}`),json(`/v1/prices?ticker=${t}&limit=180`)]);const x=s.data,checks=[['Momentum',x.momentum_pass],['RS6M > 0',x.rs_pass],['Price > MA50 > MA200',x.trend_pass],['Breakout 20 phiên',x.breakout_pass],['Volume ratio ≥ 0.8',x.volume_pass]];$('#detail').innerHTML=`<div class="detail-head"><div><div class="big-ticker">${x.ticker}</div><div>${x.company_name||''}</div><span class="tag ${x.final_action}">${x.final_action}</span></div><div class="price">${n(x.price,2)}</div></div><div class="grid"><div class="metric"><span class="label">Unified Score</span><b>${n(x.unified_score)}</b></div><div class="metric"><span class="label">FA hiệu dụng / coverage</span><b>${n(x.effective_fa)} / ${pct(x.fa_coverage)}</b></div><div class="metric"><span class="label">FA gốc / Price-volume</span><b>${n(x.fa_score)} / ${n(x.ta_score)}</b></div><div class="metric"><span class="label">Return 3M / 6M / 12M</span><b>${pct(x.r_3m)} · ${pct(x.r_6m)} · ${pct(x.r_12m)}</b></div><div class="metric"><span class="label">RS 6M</span><b>${pct(x.rs_6m)}</b></div><div class="metric"><span class="label">MA20 / 50 / 200</span><b>${n(x.ma20)} / ${n(x.ma50)} / ${n(x.ma200)}</b></div><div class="metric"><span class="label">Volume ratio / High close 20</span><b>${n(x.volume_ratio,2)} / ${n(x.high_close20)}</b></div><div class="metric"><span class="label">Quality / Growth · Value / Safety</span><b>${n(x.quality_score)} / ${n(x.growth_score)} · ${n(x.value_score)} / ${n(x.safety_score)}</b></div></div><div class="checks">${checks.map(c=>`<div class="check ${c[1]?'ok':'no'}">${c[1]?'✓':'×'} ${c[0]}</div>`).join('')}</div><svg id="chart" viewBox="0 0 500 180" preserveAspectRatio="none"></svg><div class="reason">${x.decision_reason||''}</div><details><summary>Xem toàn bộ trường dữ liệu của ${x.ticker}</summary><pre>${esc(JSON.stringify(x,null,2))}</pre></details>`;draw(p.data)}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function lines(items,label,value){return items.map(x=>`<div class="statline"><span>${label(x)}</span><b>${value(x)}</b></div>`).join('')}
+function renderDiagnostics(d){const q=d.quality;$('#quality').innerHTML=lines([
+['Khoảng dữ liệu',`${q.first_market_date.slice(0,10)} → ${q.latest_market_date.slice(0,10)}`],['Dòng giá hợp lệ',`${n(q.analysis_ready_rows,0)} / ${n(q.price_rows,0)}`],['Dòng bị loại',n(q.rejected_price_rows,0)],['Adjusted close',n(q.adjusted_rows,0)],['VNINDEX daily',n(q.benchmark_rows,0)],['BCTC năm',n(q.annual_financial_rows,0)],['BCTC quý',n(q.quarterly_financial_rows,0)],['Snapshot FA',n(q.snapshot_rows,0)]],x=>x[0],x=>x[1]);$('#faBreakdown').innerHTML=lines(d.fa_breakdown,x=>`${x.fa_status} · ${x.reason}`,x=>n(x.count,0));$('#reviewRows').innerHTML=d.review_tickers.map(x=>`<tr data-t="${x.ticker}"><td class="ticker">${x.ticker}</td><td class="num">${n(x.sessions,0)}</td><td>${x.missing_data_reason}</td><td class="num">${n(x.fa_coverage_pct)}%</td><td><span class="tag ${x.final_action}">${x.final_action}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Không có mã thiếu dữ liệu TA</td></tr>';document.querySelectorAll('#reviewRows tr[data-t]').forEach(tr=>tr.onclick=()=>show(tr.dataset.t));$('#sources').innerHTML=lines(d.price_sources,x=>`${x.source} · ${x.tickers} mã`,x=>n(x.rows,0));const m=d.backtest.strategy_metrics||{},b=d.backtest.vnindex_metrics||{},r=d.backtest.research_evaluation||{},v=r.validation_2025||{},vb=r.validation_2025_benchmark||{},stress=r.stress_2026||{},stressB=r.stress_2026_benchmark||{};$('#backtest').innerHTML=`<div class="note">${d.backtest.research_valid_reason||''}</div>`+lines([['Toàn kỳ · Strategy CAGR',pct(m.cagr)],['Toàn kỳ · VNINDEX CAGR',pct(b.cagr)],['Validation 2025 · Strategy CAGR',pct(v.cagr)],['Validation 2025 · VNINDEX CAGR',pct(vb.cagr)],['Stress 2026 · Strategy CAGR',pct(stress.cagr)],['Stress 2026 · VNINDEX CAGR',pct(stressB.cagr)],['Sharpe toàn kỳ',n(m.sharpe,2)],['Maximum drawdown',pct(m.maximum_drawdown)],['Số giao dịch',n(m.trade_count,0)],['Turnover / năm',m.annual_turnover==null?'—':`${n(m.annual_turnover,2)}x`],['Tỷ lệ giao dịch lãi',pct(m.winning_trade_rate)],['Lãi trung bình / Lệnh thắng',pct(m.average_win_return)],['Lỗ trung bình / Lệnh thua',pct(m.average_loss_return)],['Lãi cực đại',pct(m.max_win_return)],['Lỗ cực đại',pct(m.max_loss_return)],['Giả định thời điểm FA',d.backtest.fa_backtest_status||'—']],x=>x[0],x=>x[1])}
+function draw(data){const svg=$('#chart'),v=data.map(x=>Number(x.adjusted_close)).filter(Number.isFinite);if(v.length<2)return;const lo=Math.min(...v),hi=Math.max(...v),pts=v.map((y,i)=>`${8+i*484/(v.length-1)},${168-(y-lo)/(hi-lo||1)*150}`).join(' ');svg.innerHTML=`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#35d0ba" stop-opacity=".4"/><stop offset="1" stop-color="#35d0ba" stop-opacity="0"/></linearGradient></defs><polyline points="${pts}" fill="none" stroke="#35d0ba" stroke-width="2" vector-effect="non-scaling-stroke"/><text x="10" y="18" fill="#8fa3b8" font-size="12">180 phiên gần nhất · adjusted close</text>`}
+function renderBacktestAudit(report){
+  const watchNames={STALE_PRICE:'Giá chưa có phiên mới',ILLIQUID:'Thanh khoản dưới ngưỡng',SCORE_BELOW_ENTRY:'Điểm dưới ngưỡng',MARKET_DEFENSIVE:'Thị trường phòng thủ',OUTSIDE_TOP_N:'Ngoài Top N'};
+  const watchCounts={};for(const row of all)if(row.final_action==='WATCH'){const key=row.watch_reason||'OTHER';watchCounts[key]=(watchCounts[key]||0)+1}
+  $('#watchBreakdown').innerHTML=lines(Object.entries(watchCounts).sort((a,b)=>b[1]-a[1]),x=>esc(watchNames[x[0]]||x[0]),x=>n(x[1],0));
+  if(!report.simulation_version)return;
+  const c=report.config||{};
+  $('#activeMethod').textContent=`FA ${n(c.fa_weight*100,0)}% · Entry ${n(c.entry_score,0)} · Exit ${n(c.exit_score,0)} · tối đa ${n(c.max_positions,0)} mã · thanh khoản ${n(c.minimum_average_trading_value_20d/1e9)} tỷ · thị trường MA${c.regime_ma} · thoát MA${c.exit_ma}`;
+  const m=report.strategy_metrics||{},d=report.data_diagnostics||{},a=report.component_comparison;
+  let html='<div class="note">Khớp tại đóng cửa phiên kế tiếp. Lãi/lỗ từng lệnh đã trừ phí hai chiều; tiền chưa phân bổ giữ dạng tiền mặt.</div>';
+  html+=lines([['Lệnh còn mở',n(m.open_trade_count,0)],['Mã-phiên dùng giá cũ',n(d.stale_position_sessions,0)],['Mua hủy do thiếu báo giá',n(d.cancelled_buys_missing_quote,0)]],x=>x[0],x=>x[1]);
+  if(a&&a.training){
+    const names={baseline:'Cấu hình hiện tại',without_momentum:'Bỏ điểm momentum',without_relative_strength:'Bỏ điểm RS',without_trend:'Bỏ điểm xu hướng',without_breakout:'Bỏ điểm breakout',without_volume:'Bỏ điểm volume',without_trailing_stop:'Bỏ trailing stop',exit_ma50:'Thoát theo MA50'};
+    html+='<details><summary>So sánh 8 biến thể · train 2019–2024</summary>';
+    html+=lines(a.training,x=>esc(names[x.scenario]||x.scenario),x=>`Sharpe ${n(x.metrics.sharpe,2)} · CAGR ${pct(x.metrics.cagr)}`);
+    html+=`<p>Ứng viên chọn từ train: ${esc(names[a.selected_on_training]||a.selected_on_training)}. Chưa tự đổi cấu hình.</p>`;
+    for(const [name,result] of Object.entries(a.evaluation||{})){
+      html+=`<p>${esc(names[name]||name)}</p>`;
+      html+=lines([['2025 · CAGR',pct(result.validation_2025?.strategy?.cagr)],['2026 · CAGR quy năm',pct(result.stress_2026?.strategy?.cagr)],['2026 · phí gấp đôi',pct(result.stress_2026?.double_cost?.cagr)]],x=>x[0],x=>x[1]);
+    }
+    html+='</details>';
+  }
+  const research=report.robust_optimization;
+  if(research){
+    const failed=Object.entries(research.promotion_checks||{}).filter(([,ok])=>!ok).map(([name])=>name);
+    html+=`<details open><summary>Nghiên cứu ${n(research.candidate_count,0)} cấu hình</summary><p>${research.eligible_for_promotion?'Ứng viên qua các kiểm tra đã định trước.':'Ứng viên chưa qua đủ kiểm tra; giữ cấu hình hiện tại.'}</p>`;
+    if(failed.length)html+=`<p><b>Kiểm tra không đạt:</b> ${failed.map(esc).join(' · ')}</p>`;
+    html+='<p>Chọn bằng 2019–2024, kiểm tra theo thứ tự thời gian. 2025/2026 đã từng được xem trước.</p>';
+    for(const name of ['baseline','selected']){
+      const e=research.evaluation[name];
+      html+=`<p>${name==='baseline'?'Cấu hình gốc':'Ứng viên chọn từ train'}</p>`;
+      html+=lines([['CAGR toàn kỳ',pct(e.normal.full.cagr)],['Drawdown toàn kỳ',pct(e.normal.full.maximum_drawdown)],['2025 · CAGR',pct(e.normal.validation_2025.cagr)],['2026 · CAGR quy năm',pct(e.normal.stress_2026.cagr)],['2025 · phí gấp đôi',pct(e.double_cost.validation_2025.cagr)]],x=>x[0],x=>x[1]);
+    }
+    html+='</details>';
+  }
+  $('#backtest').insertAdjacentHTML('beforeend',html);
+}
+$('#search').oninput=render;$('#filter').onchange=render;$('#reload').onclick=load;load().then(()=>{const f=all.find(x=>x.ticker==='FPT')||all[0];if(f)show(f.ticker)});
+</script></body></html>

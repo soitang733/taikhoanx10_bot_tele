@@ -1,0 +1,32 @@
+{
+  "fa_group_weights": {
+    "quality": 0.40,
+    "growth": 0.25,
+    "value": 0.20,
+    "safety": 0.15
+  },
+  "minimum_fa_coverage": 0.50,
+  "minimum_average_trading_value_20d": 2000000000,
+  "minimum_volume_ratio": 0.8,
+  "buy_fa_score": 65,
+  "buy_ta_score": 65,
+  "hold_fa_score": 60,
+  "fa_weight": 0.20,
+  "component_weights": {
+    "momentum": 30,
+    "relative_strength": 25,
+    "trend": 25,
+    "breakout": 15,
+    "volume": 5
+  },
+  "entry_score": 60,
+  "exit_score": 35,
+  "exit_ma": 200,
+  "trailing_stop_from_60d_high": 0.15,
+  "regime_ma": 50,
+  "exit_on_market_regime": false,
+  "max_positions": 30,
+  "minimum_holding_days": 10,
+  "cooldown_days": 5,
+  "reporting_lag_days": 90
+}

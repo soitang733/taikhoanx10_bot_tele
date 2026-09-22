@@ -1,0 +1,19 @@
+{
+  "name": "X10 Investment Lab",
+  "short_name": "X10",
+  "description": "Phân tích cổ phiếu, AI và Paper Trading",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3f7fc",
+  "theme_color": "#ffffff",
+  "lang": "vi",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

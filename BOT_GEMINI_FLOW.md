@@ -1,0 +1,34 @@
+# Vận hành trợ lý cổ phiếu X10
+
+`/stock MÃ` hoặc `/ask MÃ câu hỏi` áp dụng cho mọi mã trong universe hiện có (704 mã HOSE/HNX); FPT chỉ là ví dụ. Bot lấy đúng mã được hỏi, không có danh sách mã cố định trong code. Luồng xử lý:
+
+1. Đọc tín hiệu giá cuối ngày của mã được hỏi qua API nội bộ. Nếu API localhost tắt hoặc lỗi, bot tự đọc cùng kho SQLite ở chế độ chỉ-đọc; không thay đổi dữ liệu.
+2. Chỉ trong lượt hỏi này, gọi DNSE OpenAPI `get_latest_trade` cho đúng mã đó. Dữ liệu này **không ghi** vào `price_daily`, CSV hay backtest.
+3. Báo cáo mã mặc định được dựng trực tiếp từ DB: giá, khối lượng, báo cáo tài chính mới nhất, mức sinh lời/định giá, xu hướng, VN-Index, sự kiện doanh nghiệp và lý do bộ quy tắc chọn mã. Không cần dịch vụ AI để đọc được báo cáo này.
+4. Mục tin mới dùng Tavily tìm trang nguồn, sau đó AI tóm tắt các trích đoạn; AI không tự tìm web. Câu hỏi chuyên sâu kết hợp nguồn tìm được với dữ liệu nội bộ. Nếu không có nguồn, AI chỉ được giải thích dữ liệu nội bộ. Báo cáo DB vẫn hoạt động khi dịch vụ ngoài lỗi.
+
+“Latest trade” là giao dịch khớp gần nhất DNSE còn lưu, **không mặc nhiên là giá tức thời**. Bot chỉ gọi “trong 15 phút gần đây” khi thời điểm khớp thực sự nằm trong khoảng đó. Theo quy ước nguồn DNSE đã được người dùng xác nhận, `matchPrice` tính bằng **nghìn đồng/cp**; bot nhân 1.000 để hiện **đồng/cp**. Giá khớp chưa điều chỉnh sự kiện doanh nghiệp nên không so trực tiếp với chuỗi giá ngày đã điều chỉnh. Đơn vị `matchQtty` chưa xác minh, không tự đổi thành số cổ phiếu. Nếu DNSE lỗi, báo cáo từ DB vẫn chạy.
+
+Khi tra cứu một mã, bot ưu tiên gửi **hai tin nhắn đầy đủ** và tự cân lại tại ranh giới giữa các khối để không cắt giữa câu: dữ liệu/tín hiệu và phần tin có nguồn kiểm chứng. Bot không cắt bớt nội dung chỉ để ép vào một tin nhắn. Phần tin luôn chia đúng ba khối: **một tin doanh nghiệp, một tin ngành và một tin vĩ mô**. Tavily chạy ba truy vấn độc lập ở chế độ `basic`, giới hạn bài trong một tháng gần đây và giữ kết quả 15 phút để tiết kiệm hạn mức. Tin doanh nghiệp phải khớp mã hoặc tên riêng ngay trên tiêu đề; tin ngành phải khớp ngành; tin vĩ mô phải liên quan Việt Nam và lãi suất, tín dụng, tỷ giá, GDP, CPI hoặc chính sách tiền tệ. Mỗi khối trình bày trên các dòng riêng: sự kiện và số liệu có trong nguồn; chiều ảnh hưởng; tác động đến doanh thu/nhu cầu, chi phí/biên lợi nhuận, dòng tiền/vốn vay và định giá/tâm lý khi có căn cứ; thời hạn ảnh hưởng; rủi ro hoặc điểm cần theo dõi. Không có nguồn đủ sát thì để trống đúng khối đó, không lấy tin nhóm khác bù vào. Bot chỉ nhận URL HTTPS thuộc danh sách nguồn tin cậy và hiện từng nguồn trên một dòng riêng. AI chỉ đọc trích đoạn có tiêu đề/ngày, không được tự thêm tin. Nếu khóa chính AI hết hạn mức, bot thử các khóa dự phòng. Giao diện chỉ ghi “AI”, không nêu tên nhà cung cấp.
+
+Không bật công cụ tìm kiếm tích hợp của mô hình cho luồng này; tìm kiếm lấy từ Tavily. Tavily có hạn mức riêng (xem [pricing](https://www.tavily.com/pricing)). Khi không tra cứu được, bot chỉ hiển thị bối cảnh VN-Index đã lưu, không dựng tin tức giả.
+
+Mục “Doanh nghiệp” có hai lớp số liệu: (1) chỉ số có chuỗi lịch sử dùng để chấm tín hiệu/backtest; (2) số liệu DNSE cập nhật gần đây giúp người đọc hiểu tình hình hiện tại. Nếu lớp (1) thiếu ROA, P/E hoặc doanh thu, bot vẫn hiển thị số liệu tương ứng ở lớp (2) khi nguồn có, nhưng **không tự tính lại tín hiệu** vì backtest chưa có chuỗi lịch sử tương ứng. Cùng mục này cũng tra cứu tin doanh nghiệp/ngành/vĩ mô; nếu AI không trả nguồn hoặc lỗi, phải ghi rõ là chưa xác minh được.
+
+Thiết lập trong `.env` (không đưa key lên Git): `DNSE_API_KEY`, `DNSE_API_SECRET`, `GEMINI_API_KEY`, `TAVILY_API_KEY`, `TELEGRAM_BOT_TOKEN`. Chọn `TELEGRAM_PUBLIC_ACCESS=true` để mở cho tài khoản mới, hoặc dùng `TELEGRAM_ALLOWED_CHAT_IDS` cho chế độ riêng tư. Có thể đặt `TELEGRAM_UPDATE_WORKERS=4` và `GEMINI_MODEL` (mặc định `gemini-3.6-flash`). Cài dependencies với `./.venv/Scripts/python.exe -m pip install -r requirements.txt` trong PowerShell, rồi chạy API và `./.venv/Scripts/python.exe telegram_bot.py`.
+
+## Sử dụng bot Telegram
+
+Gửi `/menu` để mở các nút: **Tra cứu cổ phiếu**, **Tín hiệu BUY**, **Thị trường**, **Bản tin 8:00** và **Tình trạng dữ liệu**. Có thể gửi thẳng một mã như `SHS` hoặc gõ `/stock SHS`. Các nút trùng chức năng như “Báo cáo/Cập nhật” và các nút tách FA/TA đã được bỏ; báo cáo mã đã gộp thông tin cần thiết, còn **Tin mới** và **Hỏi AI** là hai chức năng riêng. Trong danh sách tín hiệu, chạm vào mã để xem báo cáo.
+
+Nút **Tín hiệu BUY** lấy toàn bộ mã có `final_action=BUY` (không giới hạn 10 mã), giải thích rõ BUY là kết quả tổng hợp: giá còn mới, thanh khoản giao dịch bình quân đạt ngưỡng, điểm tổng hợp đủ mức vào danh sách và trạng thái thị trường thuận lợi. Không bắt buộc cả bốn kiểm tra kỹ thuật riêng lẻ cùng đạt. Mỗi dòng nêu giá, hiệu suất 6 tháng, điểm tổng hợp và các điều kiện nổi bật; đây không phải lệnh mua.
+
+Nút **Bản tin 8:00** lưu đăng ký trong `analysis_data/telegram_state.sqlite`. Sau 08:00 giờ Việt Nam mỗi ngày, bot gửi đúng một lần cho mỗi chat đã đăng ký: VN-Index của phiên gần nhất và toàn bộ mã BUY. Nếu máy khởi động muộn, bot gửi bù sau khi chạy lại; trạng thái chỉ được đánh dấu đã gửi khi Telegram xác nhận thành công. Người dùng có thể ngừng nhận bằng nút trong màn hình đăng ký.
+
+Bot xác nhận callback ngay trước khi xử lý tác vụ chậm, chỉ nhận chat ID trong `TELEGRAM_ALLOWED_CHAT_IDS`, và không in token vào thông báo lỗi HTTP. Bot cần máy Windows bật và đã đăng nhập để Scheduled Task `VnStockTelegramBot` chạy; đây chưa phải dịch vụ 24/7 trên máy chủ.
+
+Các nhãn hiển thị cho người dùng tránh tên nhà cung cấp AI. Tín hiệu BUY/WATCH là kết quả rule engine, AI không được tự đổi tín hiệu. Báo cáo không liệt kê dày đặc các trường trống: chỉ số có dữ liệu được gom theo nhóm, còn độ phủ lịch sử thấp được giải thích một lần bằng cảnh báo rằng tín hiệu đang phụ thuộc nhiều hơn vào giá và thanh khoản. Giá khớp DNSE trong 15 phút gần nhất được đặt ở đầu báo cáo và làm nổi bật; sai lệch đồng hồ tối đa hai phút được chấp nhận. “Tin mới” không được dùng nếu không có dẫn chứng.
+
+Nếu API local tại `127.0.0.1:8765` không chạy, bot tự chuyển sang kho SQLite. Bot thử kết nối API lại sau mỗi 30 giây thay vì chờ lỗi kết nối cho mọi mục trong báo cáo. Vẫn nên dùng `install_api_task.ps1` để khôi phục API cho web/app khác. Sau khi sửa code, cần khởi động lại tác vụ bot để nạp phiên bản mới. Hai script cài task chạy trực tiếp `pythonw.exe`, có log bot ở `analysis_data/telegram_bot.log` và khóa chống chạy trùng `analysis_data/telegram_bot.lock`.
+
+Độc lập với luồng hỏi, `run_daily_pipeline.ps1` được `install_daily_task.ps1` đặt lịch 18:00 để lấy nến EOD mới cho tất cả mã rồi hợp nhất theo `ticker + date` và tái tạo DB. Đây không phải dữ liệu realtime. Nếu máy tắt hoặc tác vụ chưa cài, cần kiểm tra Windows Task Scheduler và `analysis_data/pipeline_state.json`; chỉ có file script không chứng minh lịch đã chạy.

@@ -1,0 +1,12 @@
+numpy==2.2.6
+openpyxl==3.1.5
+pandas==2.3.3
+psycopg[binary]==3.3.6
+pyarrow==21.0.0
+python-dotenv==1.1.1
+requests==2.34.2
+dnse-sdk-openapi==2.3.0
+websockets==17.1
+msgpack==1.2.2
+vnai==2.6.0
+vnstock==4.0.8
